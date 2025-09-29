@@ -1,0 +1,37 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>
+
+<div id="products-container" class="mt-4"></div>
+
+@section Scripts {
+    <script>
+        async function loadProducts() {
+            try {
+                const response = await fetch('https://localhost:7281/api/v1/products');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const products = await response.json();
+                const container = document.getElementById('products-container');
+                container.innerHTML = '<h2>Products</h2>' + 
+                    '<ul>' +
+                    products.map(product => `<li>${product.name} - $${product.price}</li>`).join('') +
+                    '</ul>';
+            } catch (error) {
+                document.getElementById('products-container').innerHTML = 'Failed to load products.';
+                console.error('Error fetching products:', error);
+            }
+        }
+
+        // Load products when the page is ready
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
+}

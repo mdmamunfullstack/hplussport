@@ -1,11 +1,15 @@
-﻿using HPlusSport.API.Models;
+﻿using Asp.Versioning;
+using HPlusSport.API.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static HPlusSport.API.Models.QueryParameters;
 
 namespace HPlusSport.API.Controllers
 {
-    [Route("api/[controller]")]
+    [ApiVersion(1.0)]
+    [ApiVersion("2.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
@@ -26,9 +30,105 @@ namespace HPlusSport.API.Controllers
         */
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetAllProducts()
+        [MapToApiVersion("1.0")]
+
+        public async Task<ActionResult<IEnumerable<Product>>> GetAllProductsV1([FromQuery]ProductQueryParameter queryParameters)
         {
-            return Ok(await _context.Products.ToArrayAsync());
+            IQueryable<Product> products  = _context.Products;
+            if (queryParameters.MinPrice != null )
+            {
+                products = products.Where(p => p.Price >= queryParameters.MinPrice.Value);
+
+            }
+            if (queryParameters.MaxPrice != null)
+            {
+                products =products.Where(p => p.Price <= queryParameters.MaxPrice.Value);
+
+            }
+            if (!string.IsNullOrEmpty(queryParameters.SearchTerm))
+            {
+                products = products.Where(p => p.Sku.ToLower().Contains(queryParameters.SearchTerm.ToLower()) ||
+                                               p.Name.ToLower().Contains(queryParameters.SearchTerm.ToLower()));
+            }
+
+            if (!string.IsNullOrEmpty(queryParameters.Sku))
+            {
+                products = products.Where(p => p.Sku == queryParameters.Sku);
+
+            }
+            if (!string.IsNullOrEmpty(queryParameters.Name))
+            {
+                products = products.Where(p => p.Name.ToLower().Contains(queryParameters.Name.ToLower()));
+            }
+            if (!string.IsNullOrEmpty(queryParameters.SortBy))
+            {
+
+                if (typeof(Product).GetProperty(queryParameters.SortBy) != null)
+                {
+                    products = products.OrderByCustom(queryParameters.SortBy, queryParameters.SortOrder);
+
+                }
+
+            }
+
+
+
+
+            products = products.Skip(queryParameters.Size * (queryParameters.Page - 1))
+                               .Take(queryParameters.Size);
+
+            return Ok(await products.ToArrayAsync());
+        }
+
+
+        [HttpGet]
+        [MapToApiVersion("2.0")]
+        public async Task<ActionResult<IEnumerable<Product>>> GetAllProductsV2([FromQuery] ProductQueryParameter queryParameters)
+        {
+            IQueryable<Product> products = _context.Products.Where(p => p.IsAvailable == true);
+            if (queryParameters.MinPrice != null)
+            {
+                products = products.Where(p => p.Price >= queryParameters.MinPrice.Value);
+
+            }
+            if (queryParameters.MaxPrice != null)
+            {
+                products = products.Where(p => p.Price <= queryParameters.MaxPrice.Value);
+
+            }
+            if (!string.IsNullOrEmpty(queryParameters.SearchTerm))
+            {
+                products = products.Where(p => p.Sku.ToLower().Contains(queryParameters.SearchTerm.ToLower()) ||
+                                               p.Name.ToLower().Contains(queryParameters.SearchTerm.ToLower()));
+            }
+
+            if (!string.IsNullOrEmpty(queryParameters.Sku))
+            {
+                products = products.Where(p => p.Sku == queryParameters.Sku);
+
+            }
+            if (!string.IsNullOrEmpty(queryParameters.Name))
+            {
+                products = products.Where(p => p.Name.ToLower().Contains(queryParameters.Name.ToLower()));
+            }
+            if (!string.IsNullOrEmpty(queryParameters.SortBy))
+            {
+
+                if (typeof(Product).GetProperty(queryParameters.SortBy) != null)
+                {
+                    products = products.OrderByCustom(queryParameters.SortBy, queryParameters.SortOrder);
+
+                }
+
+            }
+
+
+
+
+            products = products.Skip(queryParameters.Size * (queryParameters.Page - 1))
+                               .Take(queryParameters.Size);
+
+            return Ok(await products.ToArrayAsync());
         }
 
         [HttpGet]
